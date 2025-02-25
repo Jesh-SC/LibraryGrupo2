@@ -1,6 +1,5 @@
 import tkinter as tk
 from tkinter import messagebox
-import sqlite3
 
 
 class Libro:
@@ -27,6 +26,25 @@ class Libro:
         estado = f"Prestado a {self.prestado_a.nombre}" if self.prestado_a else "Disponible"
         return f"Titulo: {self.titulo}, Autor: {self.autor}, BookID: {self.BookID}, Estado: {estado}"
 
+
+class LibroDigital(Libro):
+    def __init__(self, titulo, autor, BookID, formato="PDF"):
+        super().__init__(titulo, autor, BookID)
+        self.formato = formato
+
+    def __str__(self):
+        return super().__str__() + f", Formato: {self.formato}"
+
+
+class LibroFisico(Libro):
+    def __init__(self, titulo, autor, BookID, ubicacion):
+        super().__init__(titulo, autor, BookID)
+        self.ubicacion = ubicacion
+
+    def __str__(self):
+        return super().__str__() + f", Ubicación: {self.ubicacion}"
+
+
 class Miembro:
     def __init__(self, nombre, id_miembro):
         self.nombre = nombre
@@ -35,54 +53,37 @@ class Miembro:
     def __str__(self):
         return f"Miembro: {self.nombre}, ID: {self.id_miembro}"
 
+
+class Estudiante(Miembro):
+    def __init__(self, nombre, id_miembro, grado):
+        super().__init__(nombre, id_miembro)
+        self.grado = grado
+
+    def __str__(self):
+        return super().__str__() + f", Grado: {self.grado}"
+
+
+class Profesor(Miembro):
+    def __init__(self, nombre, id_miembro, departamento):
+        super().__init__(nombre, id_miembro)
+        self.departamento = departamento
+
+    def __str__(self):
+        return super().__str__() + f", Departamento: {self.departamento}"
+
+
 class Biblioteca:
-    db_name = 'database.db'
     def __init__(self):
         self.catalogo = []
         self.miembros = []
 
-        self.create_table()
-        
-    def run_query(self, query, parametros=()):
-        with sqlite3.connect(self.db_name) as conn:
-            cursor = conn.cursor()
-            resultado = cursor.execute(query, parametros)
-            conn.commit()
-        return resultado
-
-    
-    def create_table(self):
-        query = '''CREATE TABLE IF NOT EXISTS libros (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    nombre TEXT NOT NULL,
-                    libro TEXT NOT NULL,
-                    BookID TEXT UNIQUE NOT NULL
-                )'''
-        self.run_query(query)
-        
     def anadir_libro(self, libro):
         self.catalogo.append(libro)
-        query = 'INSERT INTO libros VALUES (NULL, ?, ?, ?)'
-        parametros = (libro.titulo, libro.autor, libro.BookID)
-        self.run_query(query, parametros)
-        
-    def get_libros(self):
-        query = 'SELECT nombre, libro, BookID FROM libros ORDER BY nombre DESC'
-        db_rows = self.run_query(query)  # Ejecuta la consulta
-        
-        # Extraer los datos y devolverlos como una lista de diccionarios
-        libros = []
-        for row in db_rows:
-            libros.append({
-                "nombre": row[0],
-                "libro": row[1],
-                "BookID": row[2]
-            })
-        
-        return libros
+        return f"Libro '{libro.titulo}' agregado al catálogo."
 
     def prestar_libro(self, BookID, id_miembro):
-        miembro = next((m for m in self.miembros if m.id_miembro == id_miembro), None)
+        miembro = next(
+            (m for m in self.miembros if m.id_miembro == id_miembro), None)
         if miembro is None:
             return "Miembro no encontrado."
         for libro in self.catalogo:
@@ -102,16 +103,35 @@ class Biblioteca:
                 libro.prestado_a = None
                 return f"Estado del libro '{libro.titulo}' actualizado."
         return "Libro no encontrado."
-    
-    
+
+    def mostrar_catalogo(self):
+        return "\n".join(str(libro) for libro in self.catalogo) if self.catalogo else "No hay libros en el catálogo."
+
     def agregar_miembro(self, miembro):
         self.miembros.append(miembro)
         return f"Miembro '{miembro.nombre}' agregado a la biblioteca."
 
     def mostrar_miembros(self):
         return "\n".join(str(miembro) for miembro in self.miembros) if self.miembros else "No hay miembros registrados."
-    
-    
+
+
+biblioteca = Biblioteca()
+
+libro_fisico = LibroFisico("Cien años de soledad",
+                           "Gabriel García Márquez", "101", "Estante A3")
+libro_digital = LibroDigital("Python para Todos", "Al Sweigart", "102", "EPUB")
+
+biblioteca.anadir_libro(libro_fisico)
+biblioteca.anadir_libro(libro_digital)
+
+
+estudiante = Estudiante("Carlos Pérez", "201", "10° Grado")
+profesor = Profesor("Dra. Ana López", "301", "Matemáticas")
+
+biblioteca.agregar_miembro(estudiante)
+biblioteca.agregar_miembro(profesor)
+
+print(biblioteca.mostrar_catalogo())
 
 
 def agregar_libro():
@@ -137,15 +157,17 @@ def agregar_libro():
         if titulo and autor and BookID:
             libro = Libro(titulo, autor, BookID)
             biblioteca.anadir_libro(libro)
-            messagebox.showinfo("Éxito", f"Libro '{titulo}' agregado correctamente.")
+            messagebox.showinfo(
+                "Éxito", f"Libro '{titulo}' agregado correctamente.")
             ventana_agregar.destroy()  # Cierra la ventana después de agregar
         else:
-            messagebox.showwarning("Error", "Todos los campos son obligatorios.")
-            
-        
+            messagebox.showwarning(
+                "Error", "Todos los campos son obligatorios.")
 
-    tk.Button(ventana_agregar, text="Agregar", command=anadir_libro).grid(row=3, column=0, columnspan=2, pady=10)
-    
+    tk.Button(ventana_agregar, text="Agregar", command=anadir_libro).grid(
+        row=3, column=0, columnspan=2, pady=10)
+
+
 def abrir_prestamo():
     ventana_prestamo = tk.Toplevel(root)
     ventana_prestamo.title("Prestar Libro")
@@ -163,14 +185,17 @@ def abrir_prestamo():
         id_miembro = entry_id_miembro.get()
 
         if not BookID or not id_miembro:
-            messagebox.showwarning("Error", "Todos los campos son obligatorios.")
+            messagebox.showwarning(
+                "Error", "Todos los campos son obligatorios.")
             return
 
         resultado = biblioteca.prestar_libro(BookID, id_miembro)
         messagebox.showinfo("Resultado", resultado)
         ventana_prestamo.destroy()  # Cierra la ventana después de prestar el libro
 
-    tk.Button(ventana_prestamo, text="Prestar", command=prestar_libro).grid(row=2, column=0, columnspan=2, pady=10)
+    tk.Button(ventana_prestamo, text="Prestar", command=prestar_libro).grid(
+        row=2, column=0, columnspan=2, pady=10)
+
 
 def abrir_devolucion():
     ventana_devolucion = tk.Toplevel(root)
@@ -184,21 +209,22 @@ def abrir_devolucion():
         BookID = entry_BookID_devolucion.get()
 
         if not BookID:
-            messagebox.showwarning("Error", "Debe ingresar el BookID del libro.")
+            messagebox.showwarning(
+                "Error", "Debe ingresar el BookID del libro.")
             return
 
         resultado = biblioteca.devolver_libro(BookID)
         messagebox.showinfo("Resultado", resultado)
-        ventana_devolucion.destroy() 
+        ventana_devolucion.destroy()
 
-    tk.Button(ventana_devolucion, text="Devolver", command=devolver_libro).grid(row=1, column=0, columnspan=2, pady=10)
+    tk.Button(ventana_devolucion, text="Devolver", command=devolver_libro).grid(
+        row=1, column=0, columnspan=2, pady=10)
 
 
 def mostrar_catalogo():
-    
+    messagebox.showinfo("Catálogo", biblioteca.mostrar_catalogo())
 
-    messagebox.showinfo("Catálogo", biblioteca.get_libros())
-    
+
 def abrir_actualizar_libro():
     ventana_actualizar = tk.Toplevel(root)
     ventana_actualizar.title("Actualizar Libro")
@@ -226,14 +252,17 @@ def abrir_actualizar_libro():
                     libro.titulo = nuevo_titulo
                 if nuevo_autor:
                     libro.autor = nuevo_autor
-                messagebox.showinfo("Éxito", f"Libro con BookID {BookID} actualizado correctamente.")
+                messagebox.showinfo(
+                    "Éxito", f"Libro con BookID {BookID} actualizado correctamente.")
                 ventana_actualizar.destroy()
                 return
-        
+
         messagebox.showwarning("Error", "Libro no encontrado.")
 
-    tk.Button(ventana_actualizar, text="Actualizar", command=actualizar_libro).grid(row=3, column=0, columnspan=2, pady=10)
-    
+    tk.Button(ventana_actualizar, text="Actualizar", command=actualizar_libro).grid(
+        row=3, column=0, columnspan=2, pady=10)
+
+
 def abrir_agregar_miembro():
     ventana_miembro = tk.Toplevel(root)
     ventana_miembro.title("Agregar Miembro")
@@ -253,13 +282,17 @@ def abrir_agregar_miembro():
         if nombre and id_miembro:
             miembro = Miembro(nombre, id_miembro)
             biblioteca.agregar_miembro(miembro)
-            messagebox.showinfo("Éxito", f"Miembro '{nombre}' agregado correctamente.")
-            ventana_miembro.destroy()  
+            messagebox.showinfo(
+                "Éxito", f"Miembro '{nombre}' agregado correctamente.")
+            ventana_miembro.destroy()
         else:
-            messagebox.showwarning("Error", "Todos los campos son obligatorios.")
+            messagebox.showwarning(
+                "Error", "Todos los campos son obligatorios.")
 
-    tk.Button(ventana_miembro, text="Agregar", command=agregar_miembro).grid(row=2, column=0, columnspan=2, pady=10)
-    
+    tk.Button(ventana_miembro, text="Agregar", command=agregar_miembro).grid(
+        row=2, column=0, columnspan=2, pady=10)
+
+
 # Configuración de la interfaz gráfica
 biblioteca = Biblioteca()
 root = tk.Tk()
@@ -271,22 +304,23 @@ frame.pack(padx=100, pady=100)
 btn_agregar = tk.Button(frame, text="Agregar Libro", command=agregar_libro)
 btn_agregar.grid(row=0, column=0, columnspan=1)
 
-btn_agregar = tk.Button(frame, text="Actualizar Libro", command=abrir_actualizar_libro)
+btn_agregar = tk.Button(frame, text="Actualizar Libro",
+                        command=abrir_actualizar_libro)
 btn_agregar.grid(row=0, column=1, columnspan=1)
 
-btn_agregar = tk.Button(frame, text="Agregar Miembro ", command=abrir_agregar_miembro)
+btn_agregar = tk.Button(frame, text="Agregar Miembro ",
+                        command=abrir_agregar_miembro)
 btn_agregar.grid(row=0, column=2, columnspan=1)
 
 btn_prestar = tk.Button(frame, text="Prestar Libro", command=abrir_prestamo)
 btn_prestar.grid(row=1, column=0, columnspan=1)
 
-btn_devolver = tk.Button(frame, text="Devolver Libro", command=abrir_devolucion)
+btn_devolver = tk.Button(frame, text="Devolver Libro",
+                         command=abrir_devolucion)
 btn_devolver.grid(row=1, column=1, columnspan=1)
 
-btn_mostrar = tk.Button(frame, text="Mostrar Catálogo", command=mostrar_catalogo)
+btn_mostrar = tk.Button(frame, text="Mostrar Catálogo",
+                        command=mostrar_catalogo)
 btn_mostrar.grid(row=1, column=2, columnspan=1)
 
 root.mainloop()
-
-
-
